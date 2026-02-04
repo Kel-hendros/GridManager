@@ -60,6 +60,13 @@ class GridManager {
     this.saveRowEditBtn = document.getElementById("saveRowEdit");
     this.currentEditingRow = null;
 
+    // Multi-section logic
+    this.layoutModal = document.getElementById("layoutModal");
+    this.importLayoutBtn = document.getElementById("importLayout");
+    this.layoutJsonPaste = document.getElementById("layoutJsonPaste");
+    this.confirmImportBtn = document.getElementById("confirmImport");
+    this.manualSectionField = document.getElementById("manualSectionField");
+
     // Sections Navigator
     this.sectionsNav = document.getElementById("sectionsNav");
     this.sectionsListContainer = document.getElementById(
