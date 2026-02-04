@@ -31,7 +31,8 @@ class GridManager {
     this.colsInput = document.getElementById("cols");
     this.sectionInput = document.getElementById("sectionCode");
     this.namingTypeInput = document.getElementById("rowNamingType");
-    this.startValueInput = document.getElementById("rowStartValue");
+    this.rowStartInput = document.getElementById("rowStartValue");
+    this.colStartInput = document.getElementById("colStartValue");
 
     this.toolBtns = document.querySelectorAll(".tool-btn");
     this.exportBtn = document.getElementById("exportCsv");
@@ -72,7 +73,8 @@ class GridManager {
       this.colsInput,
       this.sectionInput,
       this.namingTypeInput,
-      this.startValueInput,
+      this.rowStartInput,
+      this.colStartInput,
       this.zeroPaddingInput,
       this.namePatternInput,
     ];
@@ -228,7 +230,7 @@ class GridManager {
     if (this.rowOverrides[rowIndex]) return this.rowOverrides[rowIndex];
 
     const type = this.namingTypeInput.value;
-    const start = this.startValueInput.value;
+    const start = this.rowStartInput.value;
 
     if (type === "alpha") {
       return this.calculateAlphaLabel(rowIndex, start);
@@ -275,15 +277,20 @@ class GridManager {
     }
   }
 
-  formatColumn(col) {
-    if (!this.zeroPaddingInput.checked) return col.toString();
+  formatColumn(colIndex) {
+    // colIndex is 1-based physical index
+    const start = parseInt(this.colStartInput.value) || 1;
+    const actualNum = start + colIndex - 1;
 
-    const maxVal = this.cols;
-    let padLength = 2; // Default 01, 02
-    if (maxVal >= 100) padLength = 3; // 001, 002
+    if (!this.zeroPaddingInput.checked) return actualNum.toString();
+
+    // Padding logic relative to the maximum expected value
+    const maxVal = start + this.cols - 1;
+    let padLength = 2;
+    if (maxVal >= 100) padLength = 3;
     if (maxVal >= 1000) padLength = 4;
 
-    return col.toString().padStart(padLength, "0");
+    return actualNum.toString().padStart(padLength, "0");
   }
 
   generateCode(row, col) {
@@ -310,7 +317,7 @@ class GridManager {
     for (let c = 1; c <= this.cols; c++) {
       const colHeader = document.createElement("div");
       colHeader.className = "cell label col-header";
-      colHeader.textContent = c; // Columns are usually just numbers
+      colHeader.textContent = this.formatColumn(c);
       this.gridCanvas.appendChild(colHeader);
     }
 
