@@ -60,12 +60,29 @@ class GridManager {
     this.saveRowEditBtn = document.getElementById("saveRowEdit");
     this.currentEditingRow = null;
 
+    // Sections Navigator
+    this.sectionsNav = document.getElementById("sectionsNav");
+    this.sectionsListContainer = document.getElementById(
+      "sectionsListContainer",
+    );
+    this.stadiumNameSpan = document.getElementById("stadiumName");
+
+    this.stadiumData = null;
+    this.allSections = []; // List of leaf section codes (filtered)
+    this.sectionsCache = {}; // { sectionCode: { gridData, rows, cols, rowOverrides, config } }
+    this.currentSectionCode = "PISO_2/SECCION_503A";
+
+    this.STORAGE_KEY = "stadium_grid_manager_data";
+
     this.init();
   }
 
   init() {
     this.setupEventListeners();
-    this.resetGrid();
+    this.loadFromLocalStorage();
+    if (!this.stadiumData) {
+      this.resetGrid();
+    }
   }
 
   setupEventListeners() {
@@ -84,12 +101,14 @@ class GridManager {
     ];
 
     configInputs.forEach((input) => {
-      // Use 'input' for text/number, 'change' for select/checkbox
       const eventType =
         input.tagName === "SELECT" || input.type === "checkbox"
           ? "change"
           : "input";
-      input.addEventListener(eventType, () => this.resetGrid());
+      input.addEventListener(eventType, () => {
+        this.resetGrid();
+        this.saveCurrentToCache();
+      });
     });
 
     // Tool Picker
@@ -119,6 +138,15 @@ class GridManager {
     this.applyNamingBtn.addEventListener("click", () => this.resetGrid());
     this.fillAllBtn.addEventListener("click", () => this.bulkSetType("seat"));
     this.clearAllBtn.addEventListener("click", () => this.bulkSetType("empty"));
+
+    // Multi-section Events
+    this.importLayoutBtn.addEventListener("click", () =>
+      this.layoutModal.showModal(),
+    );
+    this.confirmImportBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      this.processLayoutJson();
+    });
 
     // Export
     this.exportBtn.addEventListener("click", () => this.exportToCSV());
@@ -282,6 +310,7 @@ class GridManager {
       }
       this.rowEditModal.close();
       this.renderGrid();
+      this.saveCurrentToCache();
     }
   }
 
@@ -396,6 +425,7 @@ class GridManager {
     }
 
     this.updateStats();
+    this.saveCurrentToCache();
   }
 
   openEditModal(index) {
@@ -423,6 +453,7 @@ class GridManager {
 
       this.editModal.close();
       this.updateStats();
+      this.saveCurrentToCache();
     }
   }
 
@@ -440,28 +471,185 @@ class GridManager {
       }
     });
     this.updateStats();
+    this.saveCurrentToCache();
   }
 
-  applyBulkNaming() {
-    const pattern = this.namePatternInput.value;
-    this.gridData.forEach((cell, index) => {
-      if (cell.type === "seat") {
-        const colVal = this.formatColumn(cell.col);
-        let newCode = pattern
-          .replace("$ROW", this.getRowLabel(cell.row)) // Use getRowLabel here
-          .replace("$COL", colVal);
-        cell.code = newCode;
+  processLayoutJson() {
+    try {
+      const json = JSON.parse(this.layoutJsonPaste.value);
+      this.stadiumData = json;
+      this.allSections = [];
+      this.extractLeafSections(json.sections || []);
 
-        // Find the actual DOM element using its dataset.index
-        const cellEl = this.gridCanvas.querySelector(
-          `.cell[data-index="${index}"]`,
-        );
-        if (cellEl) {
-          // Ensure element exists before modifying
-          cellEl.textContent = newCode;
+      if (this.allSections.length > 0) {
+        this.sectionsNav.style.display = "flex";
+        this.stadiumNameSpan.textContent = json.name || "Stadium Layout";
+        this.manualSectionField.style.display = "none";
+        this.layoutModal.close();
+
+        // Initialize cache if empty for the first section
+        const firstCode = this.allSections[0];
+        if (!this.sectionsCache[firstCode]) {
+          this.switchSection(firstCode);
+        } else {
+          this.renderSectionsList();
+          this.switchSection(firstCode);
         }
+        this.persistProject();
+      } else {
+        alert("No leaf sections (unnumbered: false) found in the JSON.");
+      }
+    } catch (e) {
+      alert("Invalid JSON format.");
+      console.error(e);
+    }
+  }
+
+  extractLeafSections(sections) {
+    sections.forEach((s) => {
+      // Filter out sections that should not be numbered
+      if (s.unnumbered === true) return;
+
+      if (s.sections && s.sections.length > 0) {
+        this.extractLeafSections(s.sections);
+      } else {
+        // It's a leaf section for seating
+        this.allSections.push(s.code);
       }
     });
+  }
+
+  renderSectionsList() {
+    this.sectionsListContainer.innerHTML = "";
+    this.allSections.forEach((code) => {
+      // Configured if we have data and it's not JUST defaults (at least one seat)
+      const cached = this.sectionsCache[code];
+      const hasSeats = cached && cached.gridData.some((c) => c.type === "seat");
+      const isConfigured = !!cached && hasSeats;
+
+      const button = document.createElement("button");
+      button.className = `section-item ${code === this.currentSectionCode ? "active" : ""}`;
+      button.innerHTML = `
+        <span class="status-dot ${isConfigured ? "configured" : "empty"}"></span>
+        <span class="name">${code}</span>
+      `;
+      button.onclick = () => this.switchSection(code);
+      this.sectionsListContainer.appendChild(button);
+    });
+  }
+
+  switchSection(newCode) {
+    if (
+      !newCode ||
+      (newCode === this.currentSectionCode && this.sectionsCache[newCode])
+    )
+      return;
+
+    // 1. Save current state to cache before switching
+    if (this.currentSectionCode) {
+      this.saveCurrentToCache();
+    }
+
+    this.currentSectionCode = newCode;
+    this.sectionInput.value = newCode;
+
+    if (this.sectionsCache[newCode]) {
+      this.loadFromCache(newCode);
+    } else {
+      // Default initialization for a new section
+      this.rowsInput.value = 10;
+      this.colsInput.value = 15;
+      this.rowOverrides = {};
+      this.gridData = [];
+      this.resetGrid(); // This will also call saveCurrentToCache
+    }
+
+    this.renderSectionsList();
+    this.persistProject();
+  }
+
+  saveCurrentToCache() {
+    if (!this.currentSectionCode) return;
+    this.sectionsCache[this.currentSectionCode] = {
+      gridData: JSON.parse(JSON.stringify(this.gridData)),
+      rows: this.rows,
+      cols: this.cols,
+      rowOverrides: { ...this.rowOverrides },
+      config: {
+        rowStart: this.rowStartInput.value,
+        colStart: this.colStartInput.value,
+        namingType: this.namingTypeInput.value,
+        invertRows: this.invertRowsInput.checked,
+        invertCols: this.invertColsInput.checked,
+        namePattern: this.namePatternInput.value,
+        zeroPadding: this.zeroPaddingInput.checked,
+      },
+    };
+    this.renderSectionsList();
+    this.persistProject();
+  }
+
+  loadFromCache(code) {
+    const cache = this.sectionsCache[code];
+    const cfg = cache.config || {};
+
+    this.rowsInput.value = cache.rows;
+    this.colsInput.value = cache.cols;
+    this.rowStartInput.value = cfg.rowStart || "1";
+    this.colStartInput.value = cfg.colStart || "1";
+    this.namingTypeInput.value = cfg.namingType || "numeric";
+    this.invertRowsInput.checked = !!cfg.invertRows;
+    this.invertColsInput.checked = !!cfg.invertCols;
+    this.namePatternInput.value = cfg.namePattern || "$ROW-$COL";
+    this.zeroPaddingInput.checked = !!cfg.zeroPadding;
+
+    this.rowOverrides = cache.rowOverrides || {};
+    this.gridData = cache.gridData;
+    this.rows = cache.rows;
+    this.cols = cache.cols;
+
+    this.scale = 1;
+    this.translateX = 0;
+    this.translateY = 0;
+    this.updateTransform();
+
+    this.renderGrid();
+    this.updateStats();
+  }
+
+  persistProject() {
+    const data = {
+      stadiumData: this.stadiumData,
+      allSections: this.allSections,
+      sectionsCache: this.sectionsCache,
+      currentSectionCode: this.currentSectionCode,
+    };
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+  }
+
+  loadFromLocalStorage() {
+    const raw = localStorage.getItem(this.STORAGE_KEY);
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw);
+      this.stadiumData = data.stadiumData;
+      this.allSections = data.allSections || [];
+      this.sectionsCache = data.sectionsCache || {};
+      this.currentSectionCode = data.currentSectionCode;
+
+      if (this.stadiumData) {
+        this.sectionsNav.style.display = "flex";
+        this.stadiumNameSpan.textContent =
+          this.stadiumData.name || "Stadium Layout";
+        this.manualSectionField.style.display = "none";
+        this.renderSectionsList();
+        if (this.currentSectionCode) {
+          this.loadFromCache(this.currentSectionCode);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load from localStorage", e);
+    }
   }
 
   updateStats() {

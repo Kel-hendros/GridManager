@@ -15,18 +15,36 @@
 
 <body>
     <div id="app">
+        <!-- New Section Navigator -->
+        <aside id="sectionsNav" class="sections-nav" style="display: none;">
+            <div class="nav-header">
+                <h3>Sections</h3>
+                <span id="stadiumName" class="stadium-name"></span>
+            </div>
+            <div id="sectionsListContainer" class="sections-list">
+                <!-- Sections will be injected here -->
+            </div>
+        </aside>
+
         <aside class="sidebar">
             <div class="logo">
                 <span class="logo-icon">🏟️</span>
                 <h1>Grid Manager</h1>
             </div>
 
+            <div class="actions" style="margin-bottom: 1.5rem;">
+                <button id="importLayout" class="btn btn-secondary btn-sm" style="width: 100%;">
+                    <span class="icon">📁</span> Load Layout JSON
+                </button>
+            </div>
+
             <div class="control-group">
                 <h3>Venue Configuration</h3>
-                <div class="input-field">
+                <div class="input-field" id="manualSectionField">
                     <label for="sectionCode">Section Code</label>
                     <input type="text" id="sectionCode" value="PISO_2/SECCION_503A" placeholder="e.g. PISO_1/SEC_A">
                 </div>
+
                 <div class="grid-controls">
                     <div class="input-field">
                         <label for="rows">Rows</label>
@@ -155,6 +173,22 @@
             <div class="modal-actions">
                 <button value="cancel" class="btn btn-secondary">Cancel</button>
                 <button id="saveRowEdit" value="save" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Modal for importing layout JSON -->
+    <dialog id="layoutModal" class="modal">
+        <form method="dialog">
+            <h3>Import Layout JSON</h3>
+            <p class="help-text">Paste the stadium layout JSON here to select sections easily.</p>
+            <div class="input-field">
+                <textarea id="layoutJsonPaste" placeholder="Paste JSON here..."
+                    style="min-height: 200px; width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: #fff; padding: 0.5rem; border-radius: 0.5rem; font-family: monospace;"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button value="cancel" class="btn btn-secondary">Cancel</button>
+                <button id="confirmImport" value="save" class="btn btn-primary">Process JSON</button>
             </div>
         </form>
     </dialog>
