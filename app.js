@@ -32,7 +32,7 @@ class GridManager {
     this.sectionInput = document.getElementById("sectionCode");
     this.namingTypeInput = document.getElementById("rowNamingType");
     this.startValueInput = document.getElementById("rowStartValue");
-    this.updateBtn = document.getElementById("updateGrid");
+
     this.toolBtns = document.querySelectorAll(".tool-btn");
     this.exportBtn = document.getElementById("exportCsv");
     this.applyNamingBtn = document.getElementById("applyNaming");
@@ -66,11 +66,27 @@ class GridManager {
   }
 
   setupEventListeners() {
-    // Toolbar
-    this.updateBtn.addEventListener("click", () => {
-      this.resetGrid();
+    // Real-time Configuration Sync
+    const configInputs = [
+      this.rowsInput,
+      this.colsInput,
+      this.sectionInput,
+      this.namingTypeInput,
+      this.startValueInput,
+      this.zeroPaddingInput,
+      this.namePatternInput,
+    ];
+
+    configInputs.forEach((input) => {
+      // Use 'input' for text/number, 'change' for select/checkbox
+      const eventType =
+        input.tagName === "SELECT" || input.type === "checkbox"
+          ? "change"
+          : "input";
+      input.addEventListener(eventType, () => this.resetGrid());
     });
 
+    // Tool Picker
     this.toolBtns.forEach((btn) => {
       btn.addEventListener("click", () => {
         this.toolBtns.forEach((b) => b.classList.remove("active"));
@@ -93,14 +109,10 @@ class GridManager {
     // Prevent context menu on canvas for better UX
     this.gridCanvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
-    // Naming & Bulk
-    this.applyNamingBtn.addEventListener("click", () => this.applyBulkNaming());
+    // Bulk shortcuts
+    this.applyNamingBtn.addEventListener("click", () => this.resetGrid());
     this.fillAllBtn.addEventListener("click", () => this.bulkSetType("seat"));
     this.clearAllBtn.addEventListener("click", () => this.bulkSetType("empty"));
-
-    // Config changes
-    this.namingTypeInput.addEventListener("change", () => this.renderGrid());
-    this.startValueInput.addEventListener("input", () => this.renderGrid());
 
     // Export
     this.exportBtn.addEventListener("click", () => this.exportToCSV());
