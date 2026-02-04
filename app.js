@@ -473,22 +473,25 @@ class GridManager {
   exportToCSV() {
     this.sectionCode = this.sectionInput.value || "SECTION";
 
-    let csvContent = "rowNumber,sectionCode,seatCode\n";
+    const rows = ["rowNumber,sectionCode,seatCode"];
 
     this.gridData.forEach((cell) => {
       const rowIdentifier = this.getRowLabel(cell.row);
       const seatCode = cell.type === "seat" ? cell.code : "NOT_SEAT";
-      csvContent += `${rowIdentifier},${this.sectionCode},${seatCode}\n`;
+      rows.push(`${rowIdentifier},${this.sectionCode},${seatCode}`);
     });
+
+    const csvContent = rows.join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `grid_${this.sectionCode.replace(/[\/\s]/g, "_")}.csv`,
-    );
+
+    // Remove "GRID_" and replace characters that might break filenames
+    const fileName = this.sectionCode.replace(/[\/\\ ]/g, "_") + ".csv";
+    link.setAttribute("download", fileName);
+
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
