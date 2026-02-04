@@ -33,6 +33,8 @@ class GridManager {
     this.namingTypeInput = document.getElementById("rowNamingType");
     this.rowStartInput = document.getElementById("rowStartValue");
     this.colStartInput = document.getElementById("colStartValue");
+    this.invertRowsInput = document.getElementById("invertRows");
+    this.invertColsInput = document.getElementById("invertCols");
 
     this.toolBtns = document.querySelectorAll(".tool-btn");
     this.exportBtn = document.getElementById("exportCsv");
@@ -75,6 +77,8 @@ class GridManager {
       this.namingTypeInput,
       this.rowStartInput,
       this.colStartInput,
+      this.invertRowsInput,
+      this.invertColsInput,
       this.zeroPaddingInput,
       this.namePatternInput,
     ];
@@ -226,17 +230,21 @@ class GridManager {
   }
 
   getRowLabel(rowIndex) {
-    // rowIndex is 1-based index in the physical grid
+    // rowIndex is 1-based physical index (1 = top)
     if (this.rowOverrides[rowIndex]) return this.rowOverrides[rowIndex];
 
     const type = this.namingTypeInput.value;
     const start = this.rowStartInput.value;
+    const isInverted = this.invertRowsInput.checked;
+
+    // Map physical index to logical index based on inversion
+    const logicalIndex = isInverted ? this.rows - rowIndex + 1 : rowIndex;
 
     if (type === "alpha") {
-      return this.calculateAlphaLabel(rowIndex, start);
+      return this.calculateAlphaLabel(logicalIndex, start);
     } else {
       const startNum = parseInt(start) || 1;
-      return (startNum + rowIndex - 1).toString();
+      return (startNum + logicalIndex - 1).toString();
     }
   }
 
@@ -278,9 +286,13 @@ class GridManager {
   }
 
   formatColumn(colIndex) {
-    // colIndex is 1-based physical index
+    // colIndex is 1-based physical index (1 = left)
     const start = parseInt(this.colStartInput.value) || 1;
-    const actualNum = start + colIndex - 1;
+    const isInverted = this.invertColsInput.checked;
+
+    // Map physical index to logical index based on inversion
+    const logicalIndex = isInverted ? this.cols - colIndex + 1 : colIndex;
+    const actualNum = start + logicalIndex - 1;
 
     if (!this.zeroPaddingInput.checked) return actualNum.toString();
 
