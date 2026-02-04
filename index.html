@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stadium Grid Manager</title>
+    <meta name="description"
+        content="A professional tool to design and export stadium seat grids for sports and entertainment venues.">
+    <link rel="stylesheet" href="index.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div id="app">
+        <aside class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">🏟️</span>
+                <h1>Grid Manager</h1>
+            </div>
+
+            <div class="control-group">
+                <h3>Venue Configuration</h3>
+                <div class="input-field">
+                    <label for="sectionCode">Section Code</label>
+                    <input type="text" id="sectionCode" value="PISO_2/SECCION_503A" placeholder="e.g. PISO_1/SEC_A">
+                </div>
+                <div class="grid-controls">
+                    <div class="input-field">
+                        <label for="rows">Rows</label>
+                        <input type="number" id="rows" value="10" min="1" max="100">
+                    </div>
+                    <div class="input-field">
+                        <label for="cols">Cols</label>
+                        <input type="number" id="cols" value="15" min="1" max="100">
+                    </div>
+                </div>
+
+                <div class="row-naming-config sub-group">
+                    <h4>Row Identification</h4>
+                    <div class="input-field">
+                        <label for="rowNamingType">Naming Type</label>
+                        <select id="rowNamingType">
+                            <option value="numeric">Numbers (1, 2, 3...)</option>
+                            <option value="alpha">Letters (A, B, C...)</option>
+                        </select>
+                    </div>
+                    <div class="input-field">
+                        <label for="rowStartValue">Start From</label>
+                        <input type="text" id="rowStartValue" value="1" placeholder="e.g. 1 or A">
+                    </div>
+                </div>
+
+                <button id="updateGrid" class="btn btn-primary">Apply Configuration</button>
+            </div>
+
+            <div class="control-group">
+                <h3>Design Tools</h3>
+                <div class="tool-picker">
+                    <button class="tool-btn active" data-tool="seat" title="Paint Seats">
+                        <span class="icon">🪑</span> Seat
+                    </button>
+                    <button class="tool-btn" data-tool="empty" title="Paint Empty Spaces">
+                        <span class="icon">🚫</span> Empty
+                    </button>
+                    <button class="tool-btn" data-tool="edit" title="Rename Seats">
+                        <span class="icon">✏️</span> Edit
+                    </button>
+                </div>
+
+                <div id="bulkActions" class="sub-group">
+                    <h4>Bulk Actions</h4>
+                    <div class="grid-controls">
+                        <button id="fillAll" class="btn btn-secondary btn-sm" title="Set all to Seats">Fill All</button>
+                        <button id="clearAll" class="btn btn-secondary btn-sm" title="Set all to Empty">Clear
+                            All</button>
+                    </div>
+                </div>
+
+                <div id="bulkNaming" class="sub-group">
+                    <h4>Auto Naming</h4>
+                    <p class="help-text">Use $ROW and $COL</p>
+                    <div class="input-field">
+                        <input type="text" id="namePattern" value="$ROW-$COL" placeholder="e.g. A-$COL">
+                    </div>
+                    <div class="checkbox-field">
+                        <input type="checkbox" id="zeroPadding">
+                        <label for="zeroPadding">Zero Padding (01, 001...)</label>
+                    </div>
+                    <button id="applyNaming" class="btn btn-secondary">Apply to Seats</button>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button id="exportCsv" class="btn btn-success">
+                    <span class="icon">📥</span> Export CSV
+                </button>
+            </div>
+        </aside>
+
+        <main class="viewport">
+            <div class="canvas-container">
+                <div id="gridCanvas" class="grid-canvas"></div>
+            </div>
+            <div class="status-bar">
+                <span id="seatCount">Seats: 0</span>
+                <span id="canvasInfo">10x15 Grid</span>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for editing individual seat -->
+    <dialog id="editModal" class="modal">
+        <form method="dialog">
+            <h3>Edit Seat</h3>
+            <div class="input-field">
+                <label>Code</label>
+                <input type="text" id="editSeatCode">
+            </div>
+            <div class="modal-actions">
+                <button value="cancel" class="btn btn-secondary">Cancel</button>
+                <button id="saveSeatEdit" value="save" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Modal for editing row label -->
+    <dialog id="rowEditModal" class="modal">
+        <form method="dialog">
+            <h3>Edit Row ID</h3>
+            <div class="input-field">
+                <label>Row Identifier</label>
+                <input type="text" id="editRowLabel">
+            </div>
+            <div class="modal-actions">
+                <button value="cancel" class="btn btn-secondary">Cancel</button>
+                <button id="saveRowEdit" value="save" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
