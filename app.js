@@ -66,6 +66,7 @@ class GridManager {
     this.layoutJsonPaste = document.getElementById("layoutJsonPaste");
     this.confirmImportBtn = document.getElementById("confirmImport");
     this.manualSectionField = document.getElementById("manualSectionField");
+    this.closeProjectBtn = document.getElementById("closeProject");
 
     // Sections Navigator
     this.sectionsNav = document.getElementById("sectionsNav");
@@ -154,6 +155,7 @@ class GridManager {
       e.preventDefault();
       this.processLayoutJson();
     });
+    this.closeProjectBtn.addEventListener("click", () => this.resetProject());
 
     // Export
     this.exportBtn.addEventListener("click", () => this.exportToCSV());
@@ -656,6 +658,27 @@ class GridManager {
       }
     } catch (e) {
       console.error("Failed to load from localStorage", e);
+    }
+  }
+
+  resetProject() {
+    if (
+      confirm(
+        "Are you sure you want to close this project? All unsaved grid progress will be lost (cached data in localStorage will be cleared).",
+      )
+    ) {
+      this.stadiumData = null;
+      this.allSections = [];
+      this.sectionsCache = {};
+      this.currentSectionCode = "PISO_2/SECCION_503A";
+
+      localStorage.removeItem(this.STORAGE_KEY);
+
+      this.sectionsNav.style.display = "none";
+      this.manualSectionField.style.display = "block";
+      this.sectionInput.value = this.currentSectionCode;
+
+      this.resetGrid();
     }
   }
 
