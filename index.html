@@ -15,15 +15,26 @@
 </head>
 
 <body>
+    <header class="app-header">
+        <div class="logo">
+            <span class="logo-icon">🏟️</span>
+            <h1>G.R.I.D.O.</h1>
+        </div>
+        <div class="header-actions">
+            <button id="importLayout" class="btn btn-secondary btn-sm">
+                <span class="icon">📁</span> Load Layout JSON
+            </button>
+        </div>
+    </header>
+
     <div id="app">
         <!-- New Section Navigator -->
         <aside id="sectionsNav" class="sections-nav" style="display: none;">
             <div class="nav-header">
                 <div class="nav-title-row">
-                    <h3>Sections</h3>
+                    <span id="stadiumName" class="stadium-name"></span>
                     <button id="closeProject" class="icon-btn" title="Close Project">✖</button>
                 </div>
-                <span id="stadiumName" class="stadium-name"></span>
                 <div id="projectStats" class="project-summary">
                     Secciones: <span id="parentCount">0</span> - Sectores: <span id="leafCount">0</span>
                 </div>
@@ -37,19 +48,8 @@
         </aside>
 
         <aside class="sidebar">
-            <div class="logo">
-                <span class="logo-icon">🏟️</span>
-                <h1>Grid Manager</h1>
-            </div>
-
-            <div class="actions" style="margin-bottom: 1.5rem;">
-                <button id="importLayout" class="btn btn-secondary btn-sm" style="width: 100%;">
-                    <span class="icon">📁</span> Load Layout JSON
-                </button>
-            </div>
-
             <div class="control-group">
-                <h3>Venue Configuration</h3>
+                <h3>Grid Configuration</h3>
                 <div class="input-field" id="manualSectionField">
                     <label for="sectionCode">Section Code</label>
                     <input type="text" id="sectionCode" value="PISO_2/SECCION_503A" placeholder="e.g. PISO_1/SEC_A">
