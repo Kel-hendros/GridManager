@@ -236,6 +236,8 @@ class GridManager {
     const newRows = parseInt(this.rowsInput.value) || 10;
     const newCols = parseInt(this.colsInput.value) || 15;
     this.sectionCode = this.sectionInput.value || "SECTION";
+    this.currentSectionCode = this.sectionCode;
+    if (this.canvasTitle) this.canvasTitle.textContent = this.sectionCode;
 
     // Map old data for lookup: "row-col" -> {type, code}
     const oldDataMap = {};
@@ -769,6 +771,12 @@ class GridManager {
       this.stadiumData = data.stadiumData;
       this.currentSectionCode = data.currentSectionCode;
       this.sectionsCache = data.sectionsCache || {};
+
+      if (this.currentSectionCode) {
+        this.sectionInput.value = this.currentSectionCode;
+        if (this.canvasTitle)
+          this.canvasTitle.textContent = this.currentSectionCode;
+      }
 
       if (this.stadiumData) {
         // Repopulate mappings
