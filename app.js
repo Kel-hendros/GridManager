@@ -78,7 +78,14 @@ class GridManager {
     this.stadiumData = null;
     this.allSections = []; // List of leaf section codes (filtered)
     this.sectionsCache = {}; // { sectionCode: { gridData, rows, cols, rowOverrides, config } }
+    this.sectionToParentMap = {}; // { leafCode: parentCode }
     this.currentSectionCode = "PISO_2/SECCION_503A";
+    this.expandedNodes = new Set();
+
+    // Project Stats & Export
+    this.parentCountSpan = document.getElementById("parentCount");
+    this.leafCountSpan = document.getElementById("leafCount");
+    this.exportAllZipBtn = document.getElementById("exportAllZip");
 
     this.STORAGE_KEY = "stadium_grid_manager_data";
 
@@ -159,6 +166,7 @@ class GridManager {
 
     // Export
     this.exportBtn.addEventListener("click", () => this.exportToCSV());
+    this.exportAllZipBtn.addEventListener("click", () => this.exportToZip());
 
     // Modal
     this.saveSeatEditBtn.addEventListener("click", (e) => {
@@ -496,6 +504,8 @@ class GridManager {
         this.manualSectionField.style.display = "none";
         this.layoutModal.close();
 
+        this.updateProjectStats();
+
         // Initialize cache if empty for the first section
         const firstCode = this.allSections[0];
         if (!this.sectionsCache[firstCode]) {
@@ -514,18 +524,44 @@ class GridManager {
     }
   }
 
-  extractLeafSections(sections) {
+  extractLeafSections(sections, parentCode = null) {
     sections.forEach((s) => {
       // Filter out sections that should not be numbered
       if (s.unnumbered === true) return;
 
       if (s.sections && s.sections.length > 0) {
-        this.extractLeafSections(s.sections);
+        this.extractLeafSections(s.sections, s.code);
       } else {
         // It's a leaf section for seating
         this.allSections.push(s.code);
+        if (parentCode) {
+          this.sectionToParentMap[s.code] = parentCode;
+        }
       }
     });
+  }
+
+  updateProjectStats() {
+    if (!this.stadiumData) return;
+
+    let parentCount = 0;
+    let leafCount = 0;
+
+    const countRecursive = (sections) => {
+      sections.forEach((s) => {
+        if (s.unnumbered === true) return;
+        if (s.sections && s.sections.length > 0) {
+          parentCount++;
+          countRecursive(s.sections);
+        } else {
+          leafCount++;
+        }
+      });
+    };
+
+    countRecursive(this.stadiumData.sections || []);
+    this.parentCountSpan.textContent = parentCount;
+    this.leafCountSpan.textContent = leafCount;
   }
 
   renderSectionsList() {
@@ -540,6 +576,11 @@ class GridManager {
 
   renderSectionTree(sections, container) {
     let subtreeHasActive = false;
+    let subtreeStatus = {
+      totalLeaves: 0,
+      configuredLeaves: 0,
+    };
+
     sections.forEach((s) => {
       if (s.unnumbered === true) return;
 
@@ -550,25 +591,40 @@ class GridManager {
 
         const header = document.createElement("div");
         header.className = "tree-header";
-        header.innerHTML = `
-          <span class="tree-toggle">▶</span>
-          <span class="name">${s.name || s.code}</span>
-        `;
 
         const group = document.createElement("div");
         group.className = "tree-group";
 
+        const { hasActive, stats } = this.renderSectionTree(s.sections, group);
+
+        const allConfigured =
+          stats.totalLeaves > 0 && stats.totalLeaves === stats.configuredLeaves;
+        const nodeKey = `node_${s.code}`; // Unique key for the branch
+
+        header.innerHTML = `
+          <span class="tree-toggle">▶</span>
+          <span class="status-dot ${allConfigured ? "configured" : "empty"}"></span>
+          <span class="name">${s.name || s.code}</span>
+          <span class="count">(${stats.totalLeaves})</span>
+        `;
+
         header.onclick = () => {
           const isExpanded = group.classList.toggle("expanded");
           node.classList.toggle("expanded", isExpanded);
+          if (isExpanded) this.expandedNodes.add(nodeKey);
+          else this.expandedNodes.delete(nodeKey);
         };
 
-        const hasActiveChild = this.renderSectionTree(s.sections, group);
-        if (hasActiveChild) {
+        if (hasActive || this.expandedNodes.has(nodeKey)) {
           group.classList.add("expanded");
           node.classList.add("expanded");
+        }
+        if (hasActive) {
           subtreeHasActive = true;
         }
+
+        subtreeStatus.totalLeaves += stats.totalLeaves;
+        subtreeStatus.configuredLeaves += stats.configuredLeaves;
 
         node.appendChild(header);
         node.appendChild(group);
@@ -584,6 +640,9 @@ class GridManager {
           subtreeHasActive = true;
         }
 
+        subtreeStatus.totalLeaves += 1;
+        if (isConfigured) subtreeStatus.configuredLeaves += 1;
+
         const button = document.createElement("button");
         button.className = `section-item ${s.code === this.currentSectionCode ? "active" : ""}`;
         button.innerHTML = `
@@ -594,7 +653,8 @@ class GridManager {
         container.appendChild(button);
       }
     });
-    return subtreeHasActive;
+
+    return { hasActive: subtreeHasActive, stats: subtreeStatus };
   }
 
   switchSection(newCode) {
@@ -692,15 +752,20 @@ class GridManager {
     try {
       const data = JSON.parse(raw);
       this.stadiumData = data.stadiumData;
-      this.allSections = data.allSections || [];
-      this.sectionsCache = data.sectionsCache || {};
       this.currentSectionCode = data.currentSectionCode;
+      this.sectionsCache = data.sectionsCache || {};
 
       if (this.stadiumData) {
+        // Repopulate mappings
+        this.allSections = [];
+        this.sectionToParentMap = {};
+        this.extractLeafSections(this.stadiumData.sections || []);
+
         this.sectionsNav.style.display = "flex";
         this.stadiumNameSpan.textContent =
           this.stadiumData.name || "Stadium Layout";
         this.manualSectionField.style.display = "none";
+        this.updateProjectStats();
         this.renderSectionsList();
         if (this.currentSectionCode) {
           this.loadFromCache(this.currentSectionCode);
@@ -738,32 +803,80 @@ class GridManager {
     this.canvasInfoSpan.textContent = `${this.rows}x${this.cols} Grid`;
   }
 
-  exportToCSV() {
-    this.sectionCode = this.sectionInput.value || "SECTION";
+  generateCSVContent(gridData, sectionCode) {
+    const header = "Section,Row,Seat";
+    const rows = [header];
 
-    const rows = ["rowNumber,sectionCode,seatCode"];
-
-    this.gridData.forEach((cell) => {
-      const rowIdentifier = this.getRowLabel(cell.row);
-      const seatCode = cell.type === "seat" ? cell.code : "NOT_SEAT";
-      rows.push(`${rowIdentifier},${this.sectionCode},${seatCode}`);
+    gridData.forEach((cell) => {
+      if (cell.type === "seat") {
+        const rowLabel = cell.rowLabel || this.getRowLabel(cell.row);
+        rows.push(`${sectionCode},${rowLabel},${cell.code}`);
+      }
     });
 
-    const csvContent = rows.join("\n");
+    return rows.join("\n");
+  }
+
+  exportToCSV() {
+    const sectionCode = this.sectionInput.value || "SECTION";
+    const csvContent = this.generateCSVContent(this.gridData, sectionCode);
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
 
-    // Remove "GRID_" and replace characters that might break filenames
-    const fileName = this.sectionCode.replace(/[\/\\ ]/g, "_") + ".csv";
+    const fileName = sectionCode.replace(/[\/\\ ]/g, "_") + ".csv";
     link.setAttribute("download", fileName);
-
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+  }
+
+  async exportToZip() {
+    if (!this.stadiumData) {
+      alert("No stadium data loaded.");
+      return;
+    }
+
+    const zip = new JSZip();
+    let filesAdded = 0;
+
+    this.allSections.forEach((code) => {
+      const data = this.sectionsCache[code];
+      // Only export if worked on (or export all as requested?
+      // Usually better to export all leaf sectors found in the layout)
+      const gridToExport = data ? data.gridData : [];
+
+      const csv = this.generateCSVContent(gridToExport, code);
+
+      const parentCode = this.sectionToParentMap[code] || "OTHERS";
+      const safeParent = parentCode.replace(/[\/\\ ]/g, "_");
+      const safeLeaf = code.replace(/[\/\\ ]/g, "_");
+
+      zip.folder(safeParent).file(`${safeLeaf}.csv`, csv);
+      filesAdded++;
+    });
+
+    if (filesAdded === 0) {
+      alert("No sections to export.");
+      return;
+    }
+
+    try {
+      const content = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(content);
+      const link = document.createElement("a");
+
+      const stadiumSafe = (this.stadiumData.name || "stadium").replace(
+        /\s+/g,
+        "_",
+      );
+      link.setAttribute("href", url);
+      link.setAttribute("download", `${stadiumSafe}_layout.zip`);
+      link.click();
+    } catch (err) {
+      console.error("ZIP Generation failed", err);
+      alert("Generation failed. Check console for details.");
+    }
   }
 }
 

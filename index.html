@@ -11,6 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 
 <body>
@@ -23,6 +24,12 @@
                     <button id="closeProject" class="icon-btn" title="Close Project">✖</button>
                 </div>
                 <span id="stadiumName" class="stadium-name"></span>
+                <div id="projectStats" class="project-summary">
+                    Secciones: <span id="parentCount">0</span> - Sectores: <span id="leafCount">0</span>
+                </div>
+                <button id="exportAllZip" class="btn btn-primary btn-sm" style="margin-top: 1rem; width: 100%;">
+                    <span class="icon">📦</span> Export All (.ZIP)
+                </button>
             </div>
             <div id="sectionsListContainer" class="sections-list">
                 <!-- Sections will be injected here -->
