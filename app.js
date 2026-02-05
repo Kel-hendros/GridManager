@@ -60,6 +60,8 @@ class GridManager {
     this.saveRowEditBtn = document.getElementById("saveRowEdit");
     this.currentEditingRow = null;
 
+    this.canvasTitle = document.getElementById("canvasTitle");
+
     // Multi-section logic
     this.layoutModal = document.getElementById("layoutModal");
     this.importLayoutBtn = document.getElementById("importLayout");
@@ -501,7 +503,7 @@ class GridManager {
       if (this.allSections.length > 0) {
         this.sectionsNav.style.display = "flex";
         this.stadiumNameSpan.textContent = json.name || "Stadium Layout";
-        this.manualSectionField.style.display = "none";
+        this.sectionInput.readOnly = true;
         this.layoutModal.close();
 
         this.updateProjectStats();
@@ -671,6 +673,7 @@ class GridManager {
 
     this.currentSectionCode = newCode;
     this.sectionInput.value = newCode;
+    this.canvasTitle.textContent = newCode;
 
     if (this.sectionsCache[newCode]) {
       this.loadFromCache(newCode);
@@ -734,6 +737,7 @@ class GridManager {
 
     this.renderGrid();
     this.updateStats();
+    this.canvasTitle.textContent = code;
   }
 
   persistProject() {
@@ -764,7 +768,7 @@ class GridManager {
         this.sectionsNav.style.display = "flex";
         this.stadiumNameSpan.textContent =
           this.stadiumData.name || "Stadium Layout";
-        this.manualSectionField.style.display = "none";
+        this.sectionInput.readOnly = true;
         this.updateProjectStats();
         this.renderSectionsList();
         if (this.currentSectionCode) {
@@ -790,8 +794,9 @@ class GridManager {
       localStorage.removeItem(this.STORAGE_KEY);
 
       this.sectionsNav.style.display = "none";
-      this.manualSectionField.style.display = "block";
+      this.sectionInput.readOnly = false;
       this.sectionInput.value = this.currentSectionCode;
+      this.canvasTitle.textContent = "";
 
       this.resetGrid();
     }
