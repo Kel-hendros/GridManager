@@ -61,6 +61,7 @@ class GridManager {
     this.currentEditingRow = null;
 
     this.canvasTitle = document.getElementById("canvasTitle");
+    this.recenterBtn = document.getElementById("recenterBtn");
 
     // Multi-section logic
     this.layoutModal = document.getElementById("layoutModal");
@@ -165,6 +166,7 @@ class GridManager {
       this.processLayoutJson();
     });
     this.closeProjectBtn.addEventListener("click", () => this.resetProject());
+    this.recenterBtn.addEventListener("click", () => this.recenterView());
 
     // Export
     this.exportBtn.addEventListener("click", () => this.exportToCSV());
@@ -738,6 +740,28 @@ class GridManager {
     this.renderGrid();
     this.updateStats();
     this.canvasTitle.textContent = code;
+    this.recenterView();
+  }
+
+  recenterView() {
+    this.scale = 1;
+
+    // Calculate center
+    // We want the grid centered in the canvasContainer
+    const containerW = this.canvasContainer.clientWidth;
+    const containerH = this.canvasContainer.clientHeight;
+
+    // Grid size (approximate) - actual DOM might vary slightly but this is reliable
+    // Each cell is 40px + some padding/gap logic if any
+    // GridManager uses fixed 40px cells in index.css usually or grid-template-columns
+    // Let's get the actual grid dimensions from the element
+    const gridW = this.gridCanvas.offsetWidth;
+    const gridH = this.gridCanvas.offsetHeight;
+
+    this.translateX = (containerW - gridW) / 2;
+    this.translateY = (containerH - gridH) / 2;
+
+    this.updateTransform();
   }
 
   persistProject() {

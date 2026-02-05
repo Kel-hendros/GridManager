@@ -490,13 +490,19 @@ body {
     flex-direction: column;
 }
 
-.canvas-title {
+.canvas-header {
     position: absolute;
     top: 1.5rem;
     left: 50%;
     transform: translateX(-50%);
     z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
     pointer-events: none;
+}
+
+.canvas-title {
     background: rgba(15, 23, 42, 0.6);
     backdrop-filter: blur(8px);
     padding: 0.5rem 1.5rem;
@@ -508,6 +514,34 @@ body {
     letter-spacing: 0.05em;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.recenter-btn {
+    pointer-events: auto;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.recenter-btn:hover {
+    background: var(--accent-blue);
+    border-color: var(--accent-blue);
+    transform: scale(1.1);
+}
+
+.recenter-btn .icon {
+    font-size: 1.2rem;
 }
 
 .canvas-container {
