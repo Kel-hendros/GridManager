@@ -530,21 +530,71 @@ class GridManager {
 
   renderSectionsList() {
     this.sectionsListContainer.innerHTML = "";
-    this.allSections.forEach((code) => {
-      // Configured if we have data and it's not JUST defaults (at least one seat)
-      const cached = this.sectionsCache[code];
-      const hasSeats = cached && cached.gridData.some((c) => c.type === "seat");
-      const isConfigured = !!cached && hasSeats;
+    if (this.stadiumData && this.stadiumData.sections) {
+      this.renderSectionTree(
+        this.stadiumData.sections,
+        this.sectionsListContainer,
+      );
+    }
+  }
 
-      const button = document.createElement("button");
-      button.className = `section-item ${code === this.currentSectionCode ? "active" : ""}`;
-      button.innerHTML = `
-        <span class="status-dot ${isConfigured ? "configured" : "empty"}"></span>
-        <span class="name">${code}</span>
-      `;
-      button.onclick = () => this.switchSection(code);
-      this.sectionsListContainer.appendChild(button);
+  renderSectionTree(sections, container) {
+    let subtreeHasActive = false;
+    sections.forEach((s) => {
+      if (s.unnumbered === true) return;
+
+      if (s.sections && s.sections.length > 0) {
+        // Branch node
+        const node = document.createElement("div");
+        node.className = "tree-node";
+
+        const header = document.createElement("div");
+        header.className = "tree-header";
+        header.innerHTML = `
+          <span class="tree-toggle">▶</span>
+          <span class="name">${s.name || s.code}</span>
+        `;
+
+        const group = document.createElement("div");
+        group.className = "tree-group";
+
+        header.onclick = () => {
+          const isExpanded = group.classList.toggle("expanded");
+          node.classList.toggle("expanded", isExpanded);
+        };
+
+        const hasActiveChild = this.renderSectionTree(s.sections, group);
+        if (hasActiveChild) {
+          group.classList.add("expanded");
+          node.classList.add("expanded");
+          subtreeHasActive = true;
+        }
+
+        node.appendChild(header);
+        node.appendChild(group);
+        container.appendChild(node);
+      } else {
+        // Leaf node
+        const cached = this.sectionsCache[s.code];
+        const hasSeats =
+          cached && cached.gridData.some((c) => c.type === "seat");
+        const isConfigured = !!cached && hasSeats;
+
+        if (s.code === this.currentSectionCode) {
+          subtreeHasActive = true;
+        }
+
+        const button = document.createElement("button");
+        button.className = `section-item ${s.code === this.currentSectionCode ? "active" : ""}`;
+        button.innerHTML = `
+          <span class="status-dot ${isConfigured ? "configured" : "empty"}"></span>
+          <span class="name">${s.name || s.code}</span>
+        `;
+        button.onclick = () => this.switchSection(s.code);
+        container.appendChild(button);
+      }
     });
+    return subtreeHasActive;
   }
 
   switchSection(newCode) {
