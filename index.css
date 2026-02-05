@@ -648,9 +648,11 @@ body {
 .status-bar {
     display: flex;
     justify-content: space-between;
-    padding: 1rem 0 0 0;
+    padding: 1rem 1.5rem;
     font-size: 0.875rem;
     color: var(--text-secondary);
+    background: rgba(0, 0, 0, 0.1);
+    border-top: 1px solid var(--border-color);
 }
 
 /* Modal */
